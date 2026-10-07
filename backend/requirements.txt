@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-multipart
+torch
+torchvision
+torchaudio
+transformers
+librosa
+numpy
+opencv-python
+mediapipe
+pillow
