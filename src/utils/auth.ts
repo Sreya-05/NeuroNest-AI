@@ -147,6 +147,13 @@ export async function loginUser(
     };
 
     localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    // Clear unkeyed legacy screening state on login
+    try {
+      sessionStorage.removeItem('neuro_nest_screening_state');
+      localStorage.removeItem('neuro_nest_screening_state');
+      sessionStorage.removeItem('neuro_nest_analysis_result');
+      localStorage.removeItem('neuro_nest_analysis_result');
+    } catch (_) {}
     return { success: true, session };
   } catch (e) {
     console.error('Login network error:', e);
@@ -172,6 +179,11 @@ export function getAuthSession(): AuthSession | null {
 export function logoutUser(): void {
   try {
     localStorage.removeItem(SESSION_STORAGE_KEY);
+    // Clear unkeyed legacy screening state
+    sessionStorage.removeItem('neuro_nest_screening_state');
+    localStorage.removeItem('neuro_nest_screening_state');
+    sessionStorage.removeItem('neuro_nest_analysis_result');
+    localStorage.removeItem('neuro_nest_analysis_result');
   } catch (e) {
     console.error('Failed to remove auth session from localStorage:', e);
   }

@@ -16,27 +16,6 @@ export default function ScreeningPage() {
   useEffect(() => {
     const state = getScreeningState();
     setScreeningState(state);
-
-    // If all 3 are uploaded and result is not yet cached, pre-fetch multimodal analysis
-    if (state.speech.uploaded && state.handwriting.uploaded && state.gait.uploaded && !getAnalysisResult()) {
-      const speechFile = state.speech.savedFilename || state.speech.filename;
-      const handwritingFile = state.handwriting.savedFilename || state.handwriting.filename;
-      const gaitFile = state.gait.savedFilename || state.gait.filename;
-
-      if (speechFile && handwritingFile && gaitFile) {
-        runMultimodalAnalysis({
-          speech_filename: speechFile,
-          handwriting_filename: handwritingFile,
-          gait_filename: gaitFile,
-        })
-          .then((res) => {
-            setAnalysisResult(res);
-          })
-          .catch((err) => {
-            console.warn('Pre-analysis background trigger:', err);
-          });
-      }
-    }
   }, []);
 
   const speechDone = screeningState.speech.uploaded;

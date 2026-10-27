@@ -1,6 +1,29 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { getAuthSession } from '../utils/auth';
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+
+  const getAssessmentTarget = () => {
+    const session = getAuthSession();
+    if (!session) {
+      return '/login';
+    }
+    const role = session.role?.toLowerCase();
+    if (role === 'doctor') {
+      return '/doctor-dashboard';
+    }
+    if (role === 'patient') {
+      return '/screening';
+    }
+    return '/login';
+  };
+
+  const handleStartAssessment = (e: React.MouseEvent) => {
+    e.preventDefault();
+    navigate(getAssessmentTarget());
+  };
+
   const modalities = [
     {
       title: 'Speech Analysis',
@@ -69,7 +92,8 @@ export default function LandingPage() {
               Login
             </Link>
             <Link
-              to="/screening"
+              to={getAssessmentTarget()}
+              onClick={handleStartAssessment}
               className="px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white text-sm font-semibold transition-all duration-200 shadow-sm shadow-sky-200/50 hover:shadow-md hover:shadow-sky-200/80 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#0284c7] focus:ring-offset-2"
             >
               Get started
@@ -112,7 +136,8 @@ export default function LandingPage() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-4 sm:pt-6">
               <Link
-                to="/screening"
+                to={getAssessmentTarget()}
+                onClick={handleStartAssessment}
                 className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold text-base transition-all duration-200 shadow-sm shadow-sky-200/60 hover:shadow-md hover:shadow-sky-200 text-center active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#0284c7] focus:ring-offset-2"
               >
                 Start Assessment

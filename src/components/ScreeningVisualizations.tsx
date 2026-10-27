@@ -7,7 +7,6 @@ interface ScreeningVisualizationsProps {
 export default function ScreeningVisualizations({ data }: ScreeningVisualizationsProps) {
   const { modalities, combined_result: combined } = data;
 
-  // Safe probability extractors with clamp [0, 1]
   const clampProb = (val: number | undefined | null) => {
     if (typeof val !== 'number' || isNaN(val)) return 0;
     return Math.max(0, Math.min(1, val));
@@ -17,7 +16,7 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
     return (clampProb(val) * 100).toFixed(decimals);
   };
 
-  // 1. Speech Probabilities
+  // 1. Voice Probabilities
   const speechHealthy = clampProb(modalities?.speech?.probabilities?.healthy_control);
   const speechParkinsons = clampProb(modalities?.speech?.probabilities?.parkinsons);
 
@@ -25,13 +24,13 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
   const hwControl = clampProb(modalities?.handwriting?.probabilities?.control);
   const hwParkinsons = clampProb(modalities?.handwriting?.probabilities?.parkinsons);
 
-  // 3. Gait Probabilities (4-class distribution)
+  // 3. Walking Probabilities
   const gaitNormal = clampProb(modalities?.gait?.probabilities?.normal);
   const gaitMild = clampProb(modalities?.gait?.probabilities?.mild);
   const gaitModerate = clampProb(modalities?.gait?.probabilities?.moderate);
   const gaitSevere = clampProb(modalities?.gait?.probabilities?.severe);
 
-  // 4. Overall composite metrics
+  // 4. Overall metrics
   const compositeScore = clampProb(combined?.risk_score);
   const modelConfidence = clampProb(combined?.confidence);
   const elevatedCount = Math.max(0, Math.min(3, combined?.positive_modalities_count ?? 0));
@@ -42,22 +41,21 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Screening Biomarker Visualizations
+            AI-Assisted Screening Summary
           </h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Model-derived probability distributions and modality concordance metrics for clinical review.
+          <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+            Clear overview of your assessment results across voice, handwriting, and walking samples.
           </p>
         </div>
-        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-200 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7]" />
-          <span>Real Model Inference Probabilities</span>
+        <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-200">
+          Patient Summary
         </span>
       </div>
 
-      {/* Grid of 4 Visualization Charts */}
+      {/* Grid of 4 Simple Breakdown Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* CHART 1: Speech Acoustic Biomarker Distribution */}
+        {/* CARD 1: Voice Assessment */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4 hover:border-sky-200 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -67,26 +65,30 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">1. Speech Probability Distribution</h3>
-                <p className="text-xs text-slate-400">Acoustic tremor & phonation stability</p>
+                <h3 className="text-base font-bold text-slate-900">Voice Assessment Breakdown</h3>
+                <p className="text-xs text-slate-500">Audio sample evaluation</p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono">
-              Model: {modalities?.speech?.model || 'Audio-MLP'}
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              modalities?.speech?.label === 'PD'
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}>
+              {modalities?.speech?.label === 'PD' ? 'Elevated Finding' : 'Not Elevated'}
             </span>
           </div>
 
           <div className="space-y-3 pt-2">
-            {/* Healthy Control Bar */}
+            {/* Typical Pattern Bar */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-emerald-700 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Healthy Control Probability
+                  Typical Speech Pattern
                 </span>
                 <span className="font-bold text-slate-800">{toPct(speechHealthy)}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-700"
                   style={{ width: `${speechHealthy * 100}%` }}
@@ -99,11 +101,11 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-amber-800 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Parkinson's Risk Probability
+                  Parkinson's-related Model Indication
                 </span>
                 <span className="font-bold text-slate-800">{toPct(speechParkinsons)}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="bg-amber-500 h-full rounded-full transition-all duration-700"
                   style={{ width: `${speechParkinsons * 100}%` }}
@@ -112,13 +114,13 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Model Prediction: <strong className="text-slate-800">{modalities?.speech?.prediction}</strong></span>
-            <span>Confidence: <strong className="text-[#0284c7]">{toPct(modalities?.speech?.confidence)}%</strong></span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+            <span>AI Screening Result: <strong className="text-slate-800">{modalities?.speech?.label === 'PD' ? 'Elevated' : 'Not Elevated'}</strong></span>
+            <span>AI Confidence: <strong className="text-[#0284c7]">{toPct(modalities?.speech?.confidence)}%</strong></span>
           </div>
         </div>
 
-        {/* CHART 2: Handwriting Motor Biomarker Distribution */}
+        {/* CARD 2: Handwriting Assessment */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4 hover:border-sky-200 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -128,26 +130,30 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">2. Handwriting Probability Distribution</h3>
-                <p className="text-xs text-slate-400">Micrographia & fine motor kinematics</p>
+                <h3 className="text-base font-bold text-slate-900">Handwriting Assessment Breakdown</h3>
+                <p className="text-xs text-slate-500">Drawing sample evaluation</p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono">
-              Model: {modalities?.handwriting?.model || 'Motor-CNN'}
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              modalities?.handwriting?.label === 'PD'
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+            }`}>
+              {modalities?.handwriting?.label === 'PD' ? 'Elevated Finding' : 'Not Elevated'}
             </span>
           </div>
 
           <div className="space-y-3 pt-2">
-            {/* Healthy Control Bar */}
+            {/* Typical Control Bar */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-emerald-700 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  Control (Normal Motor Dynamics)
+                  Typical Handwriting Pattern
                 </span>
                 <span className="font-bold text-slate-800">{toPct(hwControl)}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="bg-emerald-500 h-full rounded-full transition-all duration-700"
                   style={{ width: `${hwControl * 100}%` }}
@@ -160,11 +166,11 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
               <div className="flex justify-between text-xs font-medium">
                 <span className="text-amber-800 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  Parkinson's Motor Indicator
+                  Parkinson's-related Model Indication
                 </span>
                 <span className="font-bold text-slate-800">{toPct(hwParkinsons)}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="bg-amber-500 h-full rounded-full transition-all duration-700"
                   style={{ width: `${hwParkinsons * 100}%` }}
@@ -173,13 +179,13 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Model Prediction: <strong className="text-slate-800">{modalities?.handwriting?.prediction}</strong></span>
-            <span>Confidence: <strong className="text-[#0284c7]">{toPct(modalities?.handwriting?.confidence)}%</strong></span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+            <span>AI Screening Result: <strong className="text-slate-800">{modalities?.handwriting?.label === 'PD' ? 'Elevated' : 'Not Elevated'}</strong></span>
+            <span>AI Confidence: <strong className="text-[#0284c7]">{toPct(modalities?.handwriting?.confidence)}%</strong></span>
           </div>
         </div>
 
-        {/* CHART 3: Gait Kinematics 4-Class Distribution */}
+        {/* CARD 3: Walking Assessment */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4 hover:border-sky-200 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -190,18 +196,21 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">3. Gait Kinematic Distribution</h3>
-                <p className="text-xs text-slate-400">Stride cadence & posture symmetry</p>
+                <h3 className="text-base font-bold text-slate-900">Walking Assessment Breakdown</h3>
+                <p className="text-xs text-slate-500">Walking video evaluation</p>
               </div>
             </div>
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-mono">
-              Model: {modalities?.gait?.model || 'Gait-LSTM'}
+            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              modalities?.gait?.label === 'NORMAL'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-amber-50 text-amber-800 border-amber-200'
+            }`}>
+              {modalities?.gait?.label === 'NORMAL' ? 'Normal' : modalities?.gait?.label}
             </span>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-            {/* Normal Bar */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
               <span className="text-[11px] font-semibold text-emerald-800">Normal</span>
               <p className="text-lg font-black text-slate-900 my-1">{toPct(gaitNormal, 0)}%</p>
               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -209,8 +218,7 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
               </div>
             </div>
 
-            {/* Mild Bar */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
               <span className="text-[11px] font-semibold text-amber-700">Mild</span>
               <p className="text-lg font-black text-slate-900 my-1">{toPct(gaitMild, 0)}%</p>
               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -218,8 +226,7 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
               </div>
             </div>
 
-            {/* Moderate Bar */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
               <span className="text-[11px] font-semibold text-amber-800">Moderate</span>
               <p className="text-lg font-black text-slate-900 my-1">{toPct(gaitModerate, 0)}%</p>
               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -227,8 +234,7 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
               </div>
             </div>
 
-            {/* Severe Bar */}
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col justify-between">
+            <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex flex-col justify-between">
               <span className="text-[11px] font-semibold text-rose-800">Severe</span>
               <p className="text-lg font-black text-slate-900 my-1">{toPct(gaitSevere, 0)}%</p>
               <div className="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden">
@@ -237,15 +243,13 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Model Prediction: <strong className="text-slate-800">{modalities?.gait?.prediction}</strong></span>
-            {modalities?.gait?.poses_detected !== undefined && (
-              <span>Poses: <strong className="text-slate-800">{modalities.gait.poses_detected}/{modalities.gait.frames_analyzed || 60} frames</strong></span>
-            )}
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+            <span>AI Screening Result: <strong className="text-slate-800">{modalities?.gait?.label}</strong></span>
+            <span>AI Confidence: <strong className="text-[#0284c7]">{toPct(modalities?.gait?.confidence)}%</strong></span>
           </div>
         </div>
 
-        {/* CHART 4: Overall Composite Screening Aggregation */}
+        {/* CARD 4: Combined Overview */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4 hover:border-sky-200 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -255,30 +259,28 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                 </svg>
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">4. Overall Multimodal Screening Summary</h3>
-                <p className="text-xs text-slate-400">Score, model confidence & modality concordance</p>
+                <h3 className="text-base font-bold text-slate-900">Combined Assessment Overview</h3>
+                <p className="text-xs text-slate-500">Summary across all 3 assessments</p>
               </div>
             </div>
             <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+              className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
                 isElevated
                   ? 'bg-amber-50 text-amber-800 border-amber-200'
                   : 'bg-emerald-50 text-emerald-800 border-emerald-200'
               }`}
             >
-              {combined?.classification} Indicator
+              {isElevated ? 'Elevated Finding' : 'Low Risk Indication'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            {/* Composite Score Meter */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Composite Score</span>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-2xl font-black ${isElevated ? 'text-amber-800' : 'text-emerald-800'}`}>
-                  {toPct(compositeScore)}%
-                </span>
-              </div>
+            {/* Overall Screening Indicator */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Overall Screening Indicator</span>
+              <p className={`text-2xl font-black ${isElevated ? 'text-amber-800' : 'text-emerald-800'}`}>
+                {toPct(compositeScore)}%
+              </p>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-700 ${
@@ -287,36 +289,33 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                   style={{ width: `${compositeScore * 100}%` }}
                 />
               </div>
-              <span className="text-[10px] text-slate-400">Algorithmic aggregation</span>
+              <span className="text-[10px] text-slate-400">Combined result from the three uploaded samples</span>
             </div>
 
-            {/* Average Model Confidence */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Model Confidence</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-[#0284c7]">
-                  {toPct(modelConfidence)}%
-                </span>
-              </div>
+            {/* AI Confidence */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">AI Confidence</span>
+              <p className="text-2xl font-black text-[#0284c7]">
+                {toPct(modelConfidence)}%
+              </p>
               <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
                   className="bg-[#0284c7] h-full rounded-full transition-all duration-700"
                   style={{ width: `${modelConfidence * 100}%` }}
                 />
               </div>
-              <span className="text-[10px] text-slate-400">Mean model certainty</span>
+              <span className="text-[10px] text-slate-400">Model certainty across samples</span>
             </div>
 
-            {/* Modality Concordance */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-2">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Concordance</span>
+            {/* Number of Areas Showing Elevated Findings */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100 flex flex-col justify-between space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Number of Areas Showing Elevated Findings</span>
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-slate-800">
                   {elevatedCount} of 3
                 </span>
-                <span className="text-xs text-slate-500 font-medium">Elevated</span>
+                <span className="text-xs text-slate-500 font-medium">Areas</span>
               </div>
-              {/* 3 segment visual blocks */}
               <div className="grid grid-cols-3 gap-1 h-2">
                 {[0, 1, 2].map((idx) => (
                   <div
@@ -327,13 +326,13 @@ export default function ScreeningVisualizations({ data }: ScreeningVisualization
                   />
                 ))}
               </div>
-              <span className="text-[10px] text-slate-400">Speech • Handwriting • Gait</span>
+              <span className="text-[10px] text-slate-400">Voice • Handwriting • Walking</span>
             </div>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Evaluation: <strong className="text-slate-800">{combined?.prediction}</strong></span>
-            <span className="text-[11px] text-slate-400">Non-diagnostic decision support</span>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+            <span>AI Screening Result: <strong className="text-slate-800">{isElevated ? 'Elevated Finding' : 'Low Risk Indication'}</strong></span>
+            <span className="text-[11px] text-slate-500">Non-diagnostic screening support</span>
           </div>
         </div>
 

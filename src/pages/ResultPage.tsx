@@ -41,7 +41,7 @@ export default function ResultPage() {
     const gaitFile = state.gait.savedFilename || state.gait.filename;
 
     if (!speechFile || !handwritingFile || !gaitFile) {
-      setError('Missing uploaded file references. Please return to the screening hub and upload all 3 modalities.');
+      setError('Missing uploaded file references. Please return to the screening hub and upload all 3 samples.');
       setLoading(false);
       return;
     }
@@ -82,7 +82,6 @@ export default function ResultPage() {
       return;
     }
 
-    // Otherwise initiate multimodal analysis
     fetchAnalysis();
   }, [navigate, fetchAnalysis, persistResult]);
 
@@ -95,11 +94,10 @@ export default function ResultPage() {
 
   const modalityCards = [
     {
-      title: 'Speech Analysis',
-      subtitle: 'Audio Biomarker',
+      title: 'Voice Recording',
+      subtitle: 'Audio Sample',
       filename: state.speech.filename || 'Speech sample',
-      description:
-        'Acoustic parameters including vocal pitch tremor, sustained phonation, and articulation stability have been received.',
+      description: 'Your voice recording was successfully uploaded and evaluated.',
       icon: (
         <svg className="w-6 h-6 text-[#0284c7]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
@@ -107,11 +105,10 @@ export default function ResultPage() {
       ),
     },
     {
-      title: 'Handwriting Analysis',
-      subtitle: 'Motor Biomarker',
-      filename: state.handwriting.filename || 'Handwriting image',
-      description:
-        'Pen stroke dynamics, penmanship pressure variations, and micrographia patterns have been received.',
+      title: 'Handwriting Sample',
+      subtitle: 'Drawing Image',
+      filename: state.handwriting.filename || 'Handwriting sample',
+      description: 'Your drawing sample was successfully uploaded and evaluated.',
       icon: (
         <svg className="w-6 h-6 text-[#0284c7]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
@@ -120,11 +117,10 @@ export default function ResultPage() {
       ),
     },
     {
-      title: 'Gait Analysis',
-      subtitle: 'Video Biomarker',
-      filename: state.gait.filename || 'Gait video',
-      description:
-        'Walking motion, posture dynamics, cadence symmetry, and gait hesitation indicators have been received.',
+      title: 'Walking Video',
+      subtitle: 'Video Recording',
+      filename: state.gait.filename || 'Walking video',
+      description: 'Your walking video was successfully uploaded and evaluated.',
       icon: (
         <svg className="w-6 h-6 text-[#0284c7]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
@@ -136,7 +132,37 @@ export default function ResultPage() {
 
   const combined = analysisResult?.combined_result;
   const modalities = analysisResult?.modalities;
-  const isPositive = combined?.classification === 'Positive';
+  const isPositive = combined?.classification === 'Positive' || (combined?.risk_score ?? 0) >= 0.5;
+
+  // Gait friendly label
+  const getGaitLabel = (rawLabel?: string) => {
+    if (!rawLabel) return 'Normal';
+    const upper = rawLabel.toUpperCase();
+    if (upper === 'NORMAL') return 'Normal';
+    if (upper === 'MILD') return 'Mild';
+    if (upper === 'MODERATE') return 'Moderate';
+    if (upper === 'SEVERE') return 'Severe';
+    return rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1).toLowerCase();
+  };
+
+  const gaitDisplayLabel = getGaitLabel(modalities?.gait?.label);
+
+  const getGaitExplanation = (label: string) => {
+    switch (label) {
+      case 'Normal':
+        return 'The AI observed smooth walking rhythm, steady balance, and symmetrical posture in your video.';
+      case 'Mild':
+        return 'The AI detected mild variations in stride pace or balance while walking.';
+      case 'Moderate':
+        return 'The AI noted noticeable stride changes and walking movement irregularities.';
+      case 'Severe':
+        return 'The AI observed pronounced movement differences or hesitation in walking rhythm.';
+      default:
+        return 'The AI analyzed your walking motion and stride rhythm.';
+    }
+  };
+
+  const elevatedCount = Math.max(0, Math.min(3, combined?.positive_modalities_count ?? (isPositive ? 1 : 0)));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 selection:bg-sky-100 selection:text-sky-900 font-sans">
@@ -147,7 +173,7 @@ export default function ResultPage() {
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#0284c7] flex items-center justify-center text-white shadow-sm shadow-sky-200/80 group-hover:scale-105 transition-transform duration-200 flex-shrink-0">
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-1.04" />
-                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0-.34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.04" />
+                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-1.04" />
               </svg>
             </div>
             <span className="text-slate-900 font-bold text-lg sm:text-xl tracking-tight">
@@ -166,21 +192,29 @@ export default function ResultPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8 sm:space-y-10">
-        {/* Page Header */}
+        {/* Page Title & Status */}
         <section className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>3 of 3 Modalities Uploaded</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>3 of 3 Samples Uploaded</span>
+            </div>
+            {savedToBackend && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200 text-[#0284c7] text-xs font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0284c7]" />
+                <span>Saved to Screening History</span>
+              </div>
+            )}
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            AI-Assisted Screening Report
+            AI-Assisted Screening Summary
           </h1>
           <p className="text-slate-600 text-base sm:text-lg max-w-3xl leading-relaxed">
-            This report summarizes the uploaded multimodal screening data (Speech, Handwriting, and Gait) intended for clinical decision support.
+            A clear, plain-English summary of your voice, handwriting, and walking assessments.
           </p>
         </section>
 
-        {/* Screening Status */}
+        {/* Screening Progress or Completion Status */}
         <section>
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-6 sm:p-8">
             {loading ? (
@@ -192,9 +226,9 @@ export default function ResultPage() {
                   </svg>
                 </div>
                 <div className="space-y-1">
-                  <h2 className="text-lg font-bold text-slate-900">Processing Multimodal AI Models</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Reviewing Your Uploaded Samples</h2>
                   <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                    Executing unified feature extraction across speech acoustic representations, handwriting motor dynamics, and gait video kinematics (384-dimensional joint feature space).
+                    Please wait while our AI models examine your voice recording, handwriting drawing, and walking video.
                   </p>
                 </div>
               </div>
@@ -227,9 +261,9 @@ export default function ResultPage() {
                   </svg>
                 </div>
                 <div className="space-y-1">
-                  <h2 className="text-lg font-bold text-slate-900">Multimodal AI Inference Complete</h2>
+                  <h2 className="text-lg font-bold text-slate-900">Analysis Complete</h2>
                   <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                    All three required digital biomarkers (speech, handwriting, and gait) have been processed by their respective deep learning networks and integrated through the feature-level fusion classifier.
+                    All three samples (voice, handwriting, and walking) have been processed. Your AI-assisted screening summary is ready below.
                   </p>
                 </div>
               </div>
@@ -237,9 +271,9 @@ export default function ResultPage() {
           </div>
         </section>
 
-        {/* Modality Summary Cards */}
+        {/* Uploaded Samples Overview Cards */}
         <section className="space-y-4">
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Uploaded Modalities Summary</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Your Uploaded Samples</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {modalityCards.map((modality) => (
@@ -269,313 +303,245 @@ export default function ResultPage() {
           </div>
         </section>
 
-        {/* Analysis Results Section */}
-        <section className="space-y-6">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Analysis Results</h2>
-            {analysisResult && (
-              <div className="flex items-center gap-2">
-                {savedToBackend && (
-                  <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                    <span>Saved to Screening History</span>
-                  </span>
-                )}
-                <span className="text-xs font-semibold text-sky-700 bg-sky-50 px-3 py-1 rounded-full border border-sky-200">
-                  Multimodal Fusion Model
-                </span>
-              </div>
-            )}
-          </div>
-
-          {loading ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-8 sm:p-12 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center mx-auto text-[#0284c7]">
-                <svg className="animate-spin w-6 h-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              </div>
-              <div>
-                <p className="text-slate-800 font-semibold text-base">Running Multimodal Deep Learning Inference...</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Acoustic, visual motor, and kinematic feature embeddings are being evaluated across trained PyTorch classifiers.
-                </p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-rose-200 p-8 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3.75h.008v.008H12v-.008z" />
-                </svg>
-              </div>
-              <p className="text-slate-800 font-semibold">{error}</p>
-              <button
-                type="button"
-                onClick={fetchAnalysis}
-                className="px-5 py-2.5 bg-[#0284c7] hover:bg-[#0369a1] text-white font-semibold text-sm rounded-xl transition-colors cursor-pointer"
-              >
-                Retry Multimodal Analysis
-              </button>
-            </div>
-          ) : combined && modalities ? (
-            <div className="space-y-6">
-              {/* Primary Combined Multimodal Result Card */}
-              <div className={`bg-white rounded-2xl border ${isPositive ? 'border-amber-300' : 'border-emerald-300'} p-6 sm:p-8 shadow-sm space-y-6`}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Model-Derived Screening Aggregation
-                      </span>
-                      <span
-                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
-                          isPositive
-                            ? 'bg-amber-50 text-amber-800 border-amber-200'
-                            : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                        }`}
-                      >
-                        {combined.classification} Indicator
-                      </span>
-                    </div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                      {combined.prediction}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center gap-6 sm:gap-8 self-start md:self-auto flex-wrap">
-                    <div>
-                      <p className="text-xs font-medium text-slate-500">Composite Risk Score</p>
-                      <p className="text-2xl font-black text-slate-900">
-                        {(combined.risk_score * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                    <div className="h-8 w-px bg-slate-200" />
-                    <div>
-                      <p className="text-xs font-medium text-slate-500">Average Model Confidence</p>
-                      <p className="text-2xl font-black text-[#0284c7]">
-                        {(combined.confidence * 100).toFixed(1)}%
-                      </p>
-                    </div>
-                    {combined.positive_modalities_count !== undefined && (
-                      <>
-                        <div className="h-8 w-px bg-slate-200" />
-                        <div>
-                          <p className="text-xs font-medium text-slate-500">Modality Concordance</p>
-                          <p className="text-xl font-bold text-slate-800">
-                            {combined.positive_modalities_count} of 3 Elevated
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Probability Distribution */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-emerald-700">
-                      Low Risk Indicator: {(combined.probabilities.low_risk * 100).toFixed(1)}%
+        {/* Screening Results Section */}
+        {combined && modalities && (
+          <section className="space-y-8">
+            {/* TOP CARD: Overall Screening Indication */}
+            <div className={`bg-white rounded-3xl border ${isPositive ? 'border-amber-300 shadow-amber-50/50' : 'border-emerald-300 shadow-emerald-50/50'} p-6 sm:p-10 shadow-sm`}>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Combined AI Screening Result
                     </span>
-                    <span className="text-amber-800">
-                      Elevated Risk Indicator: {(combined.probabilities.elevated_risk * 100).toFixed(1)}%
+                    <span
+                      className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                        isPositive
+                          ? 'bg-amber-50 text-amber-900 border-amber-300'
+                          : 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                      }`}
+                    >
+                      {isPositive ? 'Elevated Finding' : 'Normal / Low Risk'}
                     </span>
                   </div>
-                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
-                    <div
-                      className="bg-emerald-500 h-full transition-all duration-500"
-                      style={{ width: `${combined.probabilities.low_risk * 100}%` }}
-                    />
-                    <div
-                      className="bg-amber-500 h-full transition-all duration-500"
-                      style={{ width: `${combined.probabilities.elevated_risk * 100}%` }}
-                    />
+                  <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    {isPositive ? 'Elevated Finding' : 'Normal / Low Risk Indication'}
+                  </h2>
+                </div>
+
+                {/* Patient-Friendly Metric Badges with Required Labels */}
+                <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                  {/* Overall Screening Indicator (replacing Composite Risk Score, not a medical probability) */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 text-center min-w-[130px]">
+                    <p className="text-xs font-semibold text-slate-500">Overall Screening Indicator</p>
+                    <p className={`text-2xl sm:text-3xl font-black mt-0.5 ${isPositive ? 'text-amber-800' : 'text-emerald-800'}`}>
+                      {(combined.risk_score * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Combined result</p>
+                  </div>
+
+                  {/* AI Confidence (replacing Average Model Confidence) */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 text-center min-w-[120px]">
+                    <p className="text-xs font-semibold text-slate-500">AI Confidence</p>
+                    <p className="text-2xl sm:text-3xl font-black mt-0.5 text-[#0284c7]">
+                      {(combined.confidence * 100).toFixed(1)}%
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Model certainty</p>
+                  </div>
+
+                  {/* Number of Areas Showing Elevated Findings (replacing Modality Concordance) */}
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 sm:p-4 text-center min-w-[140px]">
+                    <p className="text-xs font-semibold text-slate-500">Number of Areas Showing Elevated Findings</p>
+                    <p className="text-2xl sm:text-3xl font-black mt-0.5 text-slate-800">
+                      {elevatedCount} of 3
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Areas with findings</p>
                   </div>
                 </div>
-
-                {/* Screening Aggregation Explanation Note */}
-                <div className="p-3 bg-sky-50/70 border border-sky-100 rounded-xl text-xs text-slate-600 flex items-start gap-2">
-                  <svg className="w-4 h-4 text-[#0284c7] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>
-                    <strong>Screening Aggregation Note:</strong> This composite score is a model-derived algorithmic aggregation of individual digital biomarkers (Speech, Handwriting, Gait), not a clinical probability or medical diagnosis. Detailed individual modality findings are presented below.
-                  </span>
-                </div>
-
-                {/* AI Summary Callout */}
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                  <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Screening Aggregation Summary
-                  </p>
-                  <p className="text-sm text-slate-700 leading-relaxed">
-                    {combined.summary}
-                  </p>
-                </div>
               </div>
+            </div>
 
-              {/* Individual Modality Breakdown Grid */}
+            {/* THREE SIMPLE MODALITY CARDS (Requirement 3) */}
+            <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                Results by Assessment Area
+              </h2>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Speech Modality Card */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
+                {/* 1. VOICE */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-5 hover:border-sky-200 transition-colors">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Speech Acoustic
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-[#0284c7]">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">VOICE</h3>
+                          <p className="text-xs text-slate-500">Voice recording</p>
+                        </div>
+                      </div>
                       <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
                           modalities.speech.label === 'PD'
                             ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         }`}
                       >
-                        {modalities.speech.label === 'PD' ? 'Elevated Indication' : 'Healthy Control'}
+                        {modalities.speech.label === 'PD' ? 'Elevated' : 'Not Elevated'}
                       </span>
                     </div>
 
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-900">{modalities.speech.prediction}</h4>
-                      <p className="text-xs text-slate-400 font-medium mt-0.5">
-                        Model: {modalities.speech.model}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Confidence:</span>
+                    <div className="space-y-2 pt-2">
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">Result:</span>
                         <span className="font-bold text-slate-900">
+                          {modalities.speech.label === 'PD' ? 'Elevated' : 'Not Elevated'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">AI Confidence:</span>
+                        <span className="font-extrabold text-[#0284c7]">
                           {(modalities.speech.confidence * 100).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Healthy Control Prob:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.speech.probabilities.healthy_control * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Parkinson's Prob:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.speech.probabilities.parkinsons * 100).toFixed(1)}%
-                        </span>
-                      </div>
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {modalities.speech.label === 'PD'
+                          ? 'The AI detected variations in your voice recording that differ from standard speech patterns.'
+                          : 'The AI found your voice recording consistent with steady, clear speech patterns.'}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Handwriting Modality Card */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
+                {/* 2. HANDWRITING */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-5 hover:border-sky-200 transition-colors">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Handwriting Motor
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-[#0284c7]">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M18 7.5l3-3m0 0l-3-3m3 3H15" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">HANDWRITING</h3>
+                          <p className="text-xs text-slate-500">Drawing sample</p>
+                        </div>
+                      </div>
                       <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
+                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
                           modalities.handwriting.label === 'PD'
                             ? 'bg-amber-50 text-amber-800 border-amber-200'
                             : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                         }`}
                       >
-                        {modalities.handwriting.label === 'PD' ? 'Elevated Indication' : 'Healthy Control'}
+                        {modalities.handwriting.label === 'PD' ? 'Elevated' : 'Not Elevated'}
                       </span>
                     </div>
 
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-900">{modalities.handwriting.prediction}</h4>
-                      <p className="text-xs text-slate-400 font-medium mt-0.5">
-                        Model: {modalities.handwriting.model}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Confidence:</span>
+                    <div className="space-y-2 pt-2">
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">Result:</span>
                         <span className="font-bold text-slate-900">
+                          {modalities.handwriting.label === 'PD' ? 'Elevated' : 'Not Elevated'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">AI Confidence:</span>
+                        <span className="font-extrabold text-[#0284c7]">
                           {(modalities.handwriting.confidence * 100).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Control Prob:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.handwriting.probabilities.control * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Parkinson's Prob:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.handwriting.probabilities.parkinsons * 100).toFixed(1)}%
-                        </span>
-                      </div>
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {modalities.handwriting.label === 'PD'
+                          ? 'The AI identified variations in your drawing sample that differ from standard handwriting patterns.'
+                          : 'The AI found steady and consistent stroke shapes in your handwriting drawing sample.'}
+                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Gait Modality Card */}
-                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-4">
-                  <div className="space-y-3">
+                {/* 3. WALKING */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between space-y-5 hover:border-sky-200 transition-colors">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                        Gait Kinematics
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-10 h-10 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center text-[#0284c7]">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M4.5 12a7.5 7.5 0 0115 0" />
+                          </svg>
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900">WALKING</h3>
+                          <p className="text-xs text-slate-500">Walking video</p>
+                        </div>
+                      </div>
                       <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full border ${
-                          modalities.gait.label === 'NORMAL'
+                        className={`text-xs font-bold px-3 py-1 rounded-full border ${
+                          gaitDisplayLabel === 'Normal'
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-amber-50 text-amber-800 border-amber-200'
+                            : gaitDisplayLabel === 'Mild'
+                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                            : gaitDisplayLabel === 'Moderate'
+                            ? 'bg-orange-50 text-orange-800 border-orange-200'
+                            : 'bg-rose-50 text-rose-800 border-rose-200'
                         }`}
                       >
-                        {modalities.gait.label}
+                        {gaitDisplayLabel}
                       </span>
                     </div>
 
-                    <div>
-                      <h4 className="text-lg font-bold text-slate-900">{modalities.gait.prediction}</h4>
-                      <p className="text-xs text-slate-400 font-medium mt-0.5">
-                        Model: {modalities.gait.model}
-                      </p>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Confidence:</span>
+                    <div className="space-y-2 pt-2">
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">Result:</span>
                         <span className="font-bold text-slate-900">
+                          {gaitDisplayLabel}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm py-1 border-b border-slate-100">
+                        <span className="text-slate-500">AI Confidence:</span>
+                        <span className="font-extrabold text-[#0284c7]">
                           {(modalities.gait.confidence * 100).toFixed(1)}%
                         </span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Normal Gait Prob:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.gait.probabilities.normal * 100).toFixed(1)}%
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Mild / Mod / Sev:</span>
-                        <span className="font-semibold text-slate-700">
-                          {(modalities.gait.probabilities.mild * 100).toFixed(0)}% /{' '}
-                          {(modalities.gait.probabilities.moderate * 100).toFixed(0)}% /{' '}
-                          {(modalities.gait.probabilities.severe * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                      {modalities.gait.poses_detected !== undefined && (
-                        <div className="flex justify-between text-xs pt-1 border-t border-slate-100 text-slate-500">
-                          <span>Kinematic Poses:</span>
-                          <span className="font-medium text-slate-700">
-                            {modalities.gait.poses_detected} of {modalities.gait.frames_analyzed || 60} frames
-                          </span>
-                        </div>
-                      )}
+                    </div>
+
+                    <div className="pt-1">
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {getGaitExplanation(gaitDisplayLabel)}
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Multimodal Probability & Metric Charts */}
-              <ScreeningVisualizations data={analysisResult} />
+            {/* AI-Assisted Screening Summary Visualizations (Requirement 1 & 4) */}
+            <ScreeningVisualizations data={analysisResult} />
 
-              {/* Speech Wav2Vec2 Temporal Acoustic Explainability */}
+            {/* Explainable AI: "Why did the AI make this result?" (Requirement 6 & 7) */}
+            <div className="space-y-6">
+              <div className="border-b border-slate-200/80 pb-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+                  Why did the AI make this result?
+                </h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  These highlighted areas show which parts of the uploaded sample influenced the AI's decision most.
+                </p>
+              </div>
+
+              {/* Speech Explainability */}
               {modalities.speech && (
                 <SpeechAttributionViewer
                   attribution={modalities.speech.attribution}
@@ -583,7 +549,7 @@ export default function ResultPage() {
                 />
               )}
 
-              {/* Handwriting EfficientNet-B0 Grad-CAM Explainability */}
+              {/* Handwriting Explainability */}
               {modalities.handwriting && (
                 <HandwritingGradCamViewer
                   gradcam={modalities.handwriting.gradcam}
@@ -591,11 +557,11 @@ export default function ResultPage() {
                 />
               )}
             </div>
-          ) : null}
-        </section>
+          </section>
+        )}
 
-        {/* Navigation Action Buttons */}
-        <section className="flex flex-col sm:flex-row gap-4">
+        {/* Action Buttons */}
+        <section className="flex flex-col sm:flex-row gap-4 pt-4">
           <button
             type="button"
             onClick={handleStartNewSession}
@@ -611,22 +577,7 @@ export default function ResultPage() {
           </Link>
         </section>
 
-        {/* Safety Disclaimer Banner */}
-        <section>
-          <div className="bg-sky-50/60 border border-sky-100 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[#0284c7]/10 flex items-center justify-center text-[#0284c7] flex-shrink-0">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-semibold text-slate-900">Medical Disclaimer</h4>
-              <p className="mt-1 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                NeuroNest AI is an AI-assisted screening/support tool and does not replace professional medical diagnosis or clinical evaluation. All screening results should be reviewed by a qualified healthcare provider before making clinical decisions.
-              </p>
-            </div>
-          </div>
-        </section>
+
       </main>
     </div>
   );
